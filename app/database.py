@@ -1,59 +1,13 @@
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
 
-from app.config import settings
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
-
-def get_engine():
-    try:
-        db_url = settings.DATABASE_URL
-
-        connect_args = (
-            {"check_same_thread": False}
-            if db_url.startswith("sqlite")
-            else {}
-        )
-
-        database_engine = create_engine(
-            db_url,
-            connect_args=connect_args
-        )
-
-        if database_engine.dialect.name == "sqlite":
-
-            @event.listens_for(database_engine, "connect")
-            def configure_sqlite(dbapi_connection, connection_record):
-                # Let SQLAlchemy control transaction beginnings.
-                dbapi_connection.isolation_level = None
-
-                # Enable SQLite foreign-key enforcement.
-                cursor = dbapi_connection.cursor()
-                cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.close()
-
-            @event.listens_for(database_engine, "begin")
-            def begin_sqlite_transaction(connection):
-                connection.exec_driver_sql("BEGIN")
-
-        return database_engine
-
-    except SQLAlchemyError as e:
-        print(f"Error creating engine: {e}")
-        raise
-
-
-def get_sessionmaker(engine):
-    return sessionmaker(
-        autoflush=False,
-        bind=engine
-    )
-
-
-engine = get_engine()
-SessionLocal = get_sessionmaker(engine)
 
 
 def get_db():
@@ -62,3 +16,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def get_engine(database_url: str = SQLALCHEMY_DATABASE_URL):
+    return create_engine(database_url)
+
+
+def get_sessionmaker(engine):
+    return sessionmaker(autocommit=False, autoflush=False, bind=engine)

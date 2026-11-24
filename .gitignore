@@ -1,13 +1,27 @@
+# Virtual environments
 venv/
+.venv/
+
+# Python cache
 __pycache__/
-*.pyc
-.DS_Store
-.coverage
-.pytest_cache
-htmlcovvenv/
-htmlcov/
-.coverage
+*.py[cod]
+
+# Test and coverage artifacts
 .pytest_cache/
-__pycache__/
-test.db
-venv/
+.coverage
+.coverage.*
+htmlcov/
+
+# Environment variables and local databases
+.env
+*.db
+
+# Operating system files
+.DS_Store
+
+# Local working backups (keep out of Git)
+backups/
+tests/.module11_backups/
+*.backup
+*.backup_*
+*.module11_backup

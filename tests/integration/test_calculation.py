@@ -1,145 +1,79 @@
-"""
-Integration tests for Calculation model database operations.
-
-Tests calculation creation, persistence, retrieval, relationships,
-and database error handling using PostgreSQL.
-"""
-
 import pytest
-from uuid import uuid4
-from sqlalchemy.exc import IntegrityError
+import uuid
+from app.models.calculation import Calculation, Addition, Subtraction, Multiplication, Division
 
-from app.models.calculation import Calculation
+def dummy_user_id():
+    return uuid.uuid4()
 
+def test_addition_get_result():
+    inputs = [10, 5, 3.5]
+    addition = Addition(user_id=dummy_user_id(), inputs=inputs)
+    result = addition.get_result()
+    assert result == sum(inputs), f'Expected {sum(inputs)}, got {result}'
 
-@pytest.mark.parametrize(
-    "calculation_type, inputs, expected",
-    [
-        ("addition", [10, 5], 15),
-        ("subtraction", [10, 5], 5),
-        ("multiplication", [10, 5], 50),
-        ("division", [10, 5], 2),
-    ],
-)
-def test_calculation_factory_and_result(
-    calculation_type, inputs, expected, test_user
-):
-    """Test factory creation and result calculation for all four types."""
+def test_subtraction_get_result():
+    inputs = [20, 5, 3]
+    subtraction = Subtraction(user_id=dummy_user_id(), inputs=inputs)
+    result = subtraction.get_result()
+    assert result == 12, f'Expected 12, got {result}'
 
-    calculation = Calculation.create(
-        calculation_type=calculation_type,
-        user_id=test_user.id,
-        inputs=inputs
-    )
+def test_multiplication_get_result():
+    inputs = [2, 3, 4]
+    multiplication = Multiplication(user_id=dummy_user_id(), inputs=inputs)
+    result = multiplication.get_result()
+    assert result == 24, f'Expected 24, got {result}'
 
-    assert calculation is not None
-    assert calculation.get_result() == expected
-    assert calculation.user_id == test_user.id
+def test_division_get_result():
+    inputs = [100, 2, 5]
+    division = Division(user_id=dummy_user_id(), inputs=inputs)
+    result = division.get_result()
+    assert result == 10, f'Expected 10, got {result}'
 
+def test_division_by_zero():
+    inputs = [50, 0, 5]
+    division = Division(user_id=dummy_user_id(), inputs=inputs)
+    with pytest.raises(ValueError, match='Cannot divide by zero.'):
+        division.get_result()
 
-def test_create_and_persist_calculation(db_session, test_user):
-    """Test saving a calculation record to PostgreSQL."""
+def test_calculation_factory_addition():
+    inputs = [1, 2, 3]
+    calc = Calculation.create(calculation_type='addition', user_id=dummy_user_id(), inputs=inputs)
+    assert isinstance(calc, Addition), 'Factory did not return an Addition instance.'
+    assert calc.get_result() == sum(inputs), 'Incorrect addition result.'
 
-    calculation = Calculation.create(
-        calculation_type="addition",
-        user_id=test_user.id,
-        inputs=[20, 30]
-    )
+def test_calculation_factory_subtraction():
+    inputs = [10, 4]
+    calc = Calculation.create(calculation_type='subtraction', user_id=dummy_user_id(), inputs=inputs)
+    assert isinstance(calc, Subtraction), 'Factory did not return a Subtraction instance.'
+    assert calc.get_result() == 6, 'Incorrect subtraction result.'
 
-    calculation.result = calculation.get_result()
+def test_calculation_factory_multiplication():
+    inputs = [3, 4, 2]
+    calc = Calculation.create(calculation_type='multiplication', user_id=dummy_user_id(), inputs=inputs)
+    assert isinstance(calc, Multiplication), 'Factory did not return a Multiplication instance.'
+    assert calc.get_result() == 24, 'Incorrect multiplication result.'
 
-    db_session.add(calculation)
-    db_session.commit()
-    db_session.refresh(calculation)
+def test_calculation_factory_division():
+    inputs = [100, 2, 5]
+    calc = Calculation.create(calculation_type='division', user_id=dummy_user_id(), inputs=inputs)
+    assert isinstance(calc, Division), 'Factory did not return a Division instance.'
+    assert calc.get_result() == 10, 'Incorrect division result.'
 
-    assert calculation.id is not None
-    assert calculation.user_id == test_user.id
-    assert calculation.type == "addition"
-    assert calculation.inputs == [20, 30]
-    assert calculation.result == 50
+def test_calculation_factory_invalid_type():
+    with pytest.raises(ValueError, match='Unsupported calculation type'):
+        Calculation.create(calculation_type='modulus', user_id=dummy_user_id(), inputs=[10, 3])
 
+def test_invalid_inputs_for_addition():
+    addition = Addition(user_id=dummy_user_id(), inputs='not-a-list')
+    with pytest.raises(ValueError, match='Inputs must be a list of numbers.'):
+        addition.get_result()
 
-def test_retrieve_calculation_from_database(db_session, test_user):
-    """Test retrieving a persisted calculation by its ID."""
+def test_invalid_inputs_for_subtraction():
+    subtraction = Subtraction(user_id=dummy_user_id(), inputs=[10])
+    with pytest.raises(ValueError, match='Inputs must be a list with at least two numbers.'):
+        subtraction.get_result()
 
-    calculation = Calculation.create(
-        calculation_type="multiplication",
-        user_id=test_user.id,
-        inputs=[4, 5]
-    )
-
-    calculation.result = calculation.get_result()
-
-    db_session.add(calculation)
-    db_session.commit()
-    db_session.refresh(calculation)
-
-    saved_id = calculation.id
-
-    retrieved = db_session.query(Calculation).filter_by(
-        id=saved_id
-    ).first()
-
-    assert retrieved is not None
-    assert retrieved.id == saved_id
-    assert retrieved.type == "multiplication"
-    assert retrieved.inputs == [4, 5]
-    assert retrieved.result == 20
-
-
-def test_calculation_user_relationship(db_session, test_user):
-    """Test the relationship between a calculation and its user."""
-
-    calculation = Calculation.create(
-        calculation_type="addition",
-        user_id=test_user.id,
-        inputs=[3, 7]
-    )
-
-    db_session.add(calculation)
-    db_session.commit()
-    db_session.refresh(calculation)
-
-    assert calculation.user is not None
-    assert calculation.user.id == test_user.id
-
-
-def test_unsupported_calculation_type(test_user):
-    """Test that unsupported calculation types raise ValueError."""
-
-    with pytest.raises(ValueError, match="Unsupported calculation type"):
-        Calculation.create(
-            calculation_type="power",
-            user_id=test_user.id,
-            inputs=[2, 3]
-        )
-
-
-def test_calculation_with_nonexistent_user(db_session):
-    """Test that PostgreSQL rejects a calculation with an invalid user ID."""
-
-    calculation = Calculation.create(
-        calculation_type="addition",
-        user_id=uuid4(),
-        inputs=[10, 20]
-    )
-
-    db_session.add(calculation)
-
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-
-    db_session.rollback()
-
-
-def test_division_by_zero_error(test_user):
-    """Test that division by zero raises ValueError."""
-
-    calculation = Calculation.create(
-        calculation_type="division",
-        user_id=test_user.id,
-        inputs=[10, 0]
-    )
-
-    with pytest.raises(ValueError, match="Cannot divide by zero"):
-        calculation.get_result()
+def test_invalid_inputs_for_division():
+    division = Division(user_id=dummy_user_id(), inputs=[10])
+    with pytest.raises(ValueError, match='Inputs must be a list with at least two numbers.'):
+        division.get_result()

@@ -6,17 +6,16 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm.session import Session
 import importlib
 import sys
-
-DATABASE_MODULE = "app.database"
+DATABASE_MODULE = 'app.database'
 
 @pytest.fixture
 def mock_settings(monkeypatch):
-    mock_url = "postgresql://user:password@localhost:5432/test_db"
+    mock_url = 'postgresql://user:password@localhost:5432/test_db'
     mock_settings = MagicMock()
     mock_settings.DATABASE_URL = mock_url
     if DATABASE_MODULE in sys.modules:
         del sys.modules[DATABASE_MODULE]
-    monkeypatch.setattr(f"{DATABASE_MODULE}.settings", mock_settings)
+    monkeypatch.setattr(f'{DATABASE_MODULE}.settings', mock_settings)
     return mock_settings
 
 def reload_database_module():
@@ -36,8 +35,8 @@ def test_get_engine_success(mock_settings):
 
 def test_get_engine_failure(mock_settings):
     database = reload_database_module()
-    with patch("app.database.create_engine", side_effect=SQLAlchemyError("Engine error")):
-        with pytest.raises(SQLAlchemyError, match="Engine error"):
+    with patch('app.database.create_engine', side_effect=SQLAlchemyError('Engine error')):
+        with pytest.raises(SQLAlchemyError, match='Engine error'):
             database.get_engine()
 
 def test_get_sessionmaker(mock_settings):
