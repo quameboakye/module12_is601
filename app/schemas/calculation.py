@@ -1,11 +1,5 @@
 from enum import Enum
-from pydantic import (
-    BaseModel,
-    Field,
-    ConfigDict,
-    model_validator,
-    field_validator
-)
+from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -21,14 +15,14 @@ class CalculationType(str, Enum):
 class CalculationBase(BaseModel):
     type: CalculationType = Field(
         ...,
-        description="Type of calculation to perform",
-        examples=["addition"]
+        description="Type of calculation (addition, subtraction, multiplication, division)",
+        example="addition"
     )
     inputs: List[float] = Field(
         ...,
         description="List of numeric inputs for the calculation",
-        examples=[[10.5, 3, 2]],
-        min_length=2
+        example=[10.5, 3, 2],
+        min_items=2
     )
 
     @field_validator("type", mode="before")
@@ -36,9 +30,7 @@ class CalculationBase(BaseModel):
     def validate_type(cls, v):
         allowed = {e.value for e in CalculationType}
         if not isinstance(v, str) or v.lower() not in allowed:
-            raise ValueError(
-                f"Type must be one of: {', '.join(sorted(allowed))}"
-            )
+            raise ValueError(f"Type must be one of: {', '.join(sorted(allowed))}")
         return v.lower()
 
     @field_validator("inputs", mode="before")
@@ -51,9 +43,7 @@ class CalculationBase(BaseModel):
     @model_validator(mode='after')
     def validate_inputs(self) -> "CalculationBase":
         if len(self.inputs) < 2:
-            raise ValueError(
-                "At least two numbers are required for calculation"
-            )
+            raise ValueError("At least two numbers are required for calculation")
         if self.type == CalculationType.DIVISION:
             if any(x == 0 for x in self.inputs[1:]):
                 raise ValueError("Cannot divide by zero")
@@ -74,7 +64,7 @@ class CalculationCreate(CalculationBase):
     user_id: UUID = Field(
         ...,
         description="UUID of the user who owns this calculation",
-        examples=["123e4567-e89b-12d3-a456-426614174000"]
+        example="123e4567-e89b-12d3-a456-426614174000"
     )
 
     model_config = ConfigDict(
@@ -92,16 +82,14 @@ class CalculationUpdate(BaseModel):
     inputs: Optional[List[float]] = Field(
         None,
         description="Updated list of numeric inputs for the calculation",
-        examples=[[42, 7]],
-        min_length=2
+        example=[42, 7],
+        min_items=2
     )
 
     @model_validator(mode='after')
     def validate_inputs(self) -> "CalculationUpdate":
         if self.inputs is not None and len(self.inputs) < 2:
-            raise ValueError(
-                "At least two numbers are required for calculation"
-            )
+            raise ValueError("At least two numbers are required for calculation")
         return self
 
     model_config = ConfigDict(
@@ -114,25 +102,19 @@ class CalculationResponse(CalculationBase):
     id: UUID = Field(
         ...,
         description="Unique UUID of the calculation",
-        examples=["123e4567-e89b-12d3-a456-426614174999"]
+        example="123e4567-e89b-12d3-a456-426614174999"
     )
     user_id: UUID = Field(
         ...,
         description="UUID of the user who owns this calculation",
-        examples=["123e4567-e89b-12d3-a456-426614174000"]
+        example="123e4567-e89b-12d3-a456-426614174000"
     )
-    created_at: datetime = Field(
-        ...,
-        description="Time when the calculation was created"
-    )
-    updated_at: datetime = Field(
-        ...,
-        description="Time when the calculation was last updated"
-    )
+    created_at: datetime = Field(..., description="Time when the calculation was created")
+    updated_at: datetime = Field(..., description="Time when the calculation was last updated")
     result: float = Field(
         ...,
         description="Result of the calculation",
-        examples=[15.5]
+        example=15.5
     )
 
     model_config = ConfigDict(
