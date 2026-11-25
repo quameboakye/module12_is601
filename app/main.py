@@ -25,6 +25,7 @@ app = FastAPI(title='Calculations API', description='API for managing calculatio
 def read_health():
     return {'status': 'ok'}
 
+@app.post('/users/register', response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=['users'])
 @app.post('/auth/register', response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=['auth'])
 def register(user_create: UserCreate, db: Session=Depends(get_db)):
     user_data = user_create.dict(exclude={'confirm_password'})
@@ -37,6 +38,7 @@ def register(user_create: UserCreate, db: Session=Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@app.post('/users/login', response_model=TokenResponse, tags=['users'])
 @app.post('/auth/login', response_model=TokenResponse, tags=['auth'])
 def login_json(user_login: UserLogin, db: Session=Depends(get_db)):
     auth_result = User.authenticate(db, user_login.username, user_login.password)
