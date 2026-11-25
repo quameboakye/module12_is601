@@ -1,115 +1,115 @@
-# Module 11 Project Reflection
+# Module 12 Project Reflection
 
 ## Introduction
 
-Module 11 focused on developing, testing, containerizing, and deploying a FastAPI application with database integration and automated CI/CD. The project brought together Python, SQLAlchemy, Pydantic, PostgreSQL, Pytest, Docker, GitHub Actions, and Docker Hub.
+Module 12 focused on developing, testing, containerizing, securing, and deploying a FastAPI application with database integration, authentication, and automated CI/CD.
 
-An important part of the assignment was implementing a calculation model that supports different arithmetic operations, validating application data, testing the application, and automating the deployment process.
+The project brought together Python, FastAPI, SQLAlchemy, Pydantic, PostgreSQL, Redis, Pytest, Docker, GitHub Actions, Trivy, and Docker Hub.
 
-## What I Implemented
+The main objective was to build a functional API application, connect it to supporting services, protect its endpoints through authentication, and establish an automated workflow for testing, security scanning, and deployment.
 
-The application includes:
+## Application Development
 
-- A FastAPI application with API endpoints and interactive API documentation.
-- SQLAlchemy models for users and calculations.
-- A polymorphic calculation model supporting addition, subtraction, multiplication, and division.
-- Pydantic schemas for validating incoming data and structuring API responses.
-- PostgreSQL database integration.
-- Unit, integration, and end-to-end tests.
-- Docker configuration for containerizing the application.
-- GitHub Actions workflows for automated testing, security scanning, and Docker Hub deployment.
+The application uses FastAPI to provide API endpoints and SQLAlchemy to manage database operations. PostgreSQL serves as the relational database, while Pydantic schemas handle data validation and serialization.
 
-The calculation model uses SQLAlchemy inheritance to represent different calculation types. This helped me understand how related models can share common fields while implementing different operations.
+Authentication was implemented using JSON Web Tokens (JWT). The application also supports token refresh functionality and uses Redis to support token blacklist operations.
 
-## Challenges and Solutions
+Working through the application structure helped me understand how different components of a modern backend application interact. It also reinforced the importance of separating routes, schemas, models, configuration, and supporting services into appropriate modules.
 
-### SQLAlchemy Model and Database Configuration
+## Database and Redis Integration
 
-One challenge was ensuring that the application models used the same SQLAlchemy declarative Base as the database configuration. Separate Base objects can cause model metadata and database table creation to become disconnected.
+PostgreSQL was integrated as the application's database. SQLAlchemy was used to interact with the database and manage application records.
 
-I corrected the imports so that the models and database initialization used the same Base. I then verified the model metadata and database table creation through the integration tests.
+Redis was incorporated to support token blacklist functionality.
 
-### PostgreSQL Port Conflict
+I verified database connectivity from inside the running application container by executing a SQL query. The query returned successfully. I also tested Redis connectivity from the application container, and Redis returned a successful PING response.
 
-I encountered a port conflict because another PostgreSQL container was already using the default host port 5432.
-
-I resolved this by mapping the PostgreSQL container's internal port 5432 to host port 5433. This allowed the project to use its own database without disrupting the existing container configuration.
-
-### Database Schema and Password Hashing
-
-Another challenge involved ensuring that the database schema used the correct password field. The application stores password hashes rather than plain-text passwords.
-
-I aligned the model and schema with the password_hash field and verified that the database retained the required unique constraints.
-
-### GitHub Actions and Deployment
-
-Configuring the CI/CD workflow required careful attention to the database connection settings, PostgreSQL service configuration, and Docker build process.
-
-I corrected the workflow configuration and verified that all three GitHub Actions jobs completed successfully:
-
-- Test: automated tests completed successfully.
-- Security: the security scanning job completed successfully.
-- Deploy: the Docker image was built and published to Docker Hub.
-
-I also pulled the published image from Docker Hub and ran it in a separate test container. The container became healthy, and both the application health endpoint and interactive API documentation returned HTTP 200 responses.
+These checks helped confirm that the application could communicate with both supporting services from its container environment.
 
 ## Testing and Quality Assurance
 
-I used Pytest to test the application's functionality across unit, integration, and end-to-end test categories.
+Pytest was used to run the application's automated tests, including the available unit, integration, and end-to-end tests.
 
-The latest verified local test results were:
+The latest local test run completed successfully:
 
-- **121 tests passed**
-- **96% total code coverage**
-- **100% coverage for the Calculation model**
-- **90% minimum coverage requirement**
+- Total tests passed: 103
+- Code coverage: 68.21%
+- Configured CI coverage threshold: 68%
 
-These results gave me confidence that the application components were working together correctly. The tests also helped identify configuration and integration issues before deployment.
+The successful test run provided evidence that the implemented functionality passed the current automated test suite.
 
-## Docker and Deployment
+The coverage result also identified an opportunity for further improvement. Increasing test coverage would help exercise more application code and provide additional confidence in the implementation.
 
-Docker provided a consistent environment for packaging and running the application.
+## Docker Containerization
 
-I used Docker Compose for the development environment and GitHub Actions to automate the CI/CD process. The workflow performs testing, security scanning, and deployment of the Docker image.
+Docker was used to package the application and its runtime dependencies into a container image.
 
-The published image is available at:
+The Dockerfile uses Python 3.11 slim as its base image. It installs the required dependencies, copies the application into the image, and configures the application to run as a non-root user.
 
-https://hub.docker.com/r/slasha1982/module11_is601
+A health check was also configured to monitor the application's health endpoint.
 
-I verified the deployment by pulling the latest image from Docker Hub and running it in a separate container. The container reported a healthy status.
+I built and ran the application container locally. I verified that the following endpoints responded successfully:
 
-I also tested the following endpoints:
+- `/health`
+- `/docs`
+- `/openapi.json`
 
-- Application health check: HTTP 200
-- Interactive API documentation: HTTP 200
+The health endpoint returned HTTP 200 with a successful status response. The container also reported a healthy state.
 
-This confirmed that the published image could be retrieved and that the application could start successfully outside the original development environment.
+These checks helped me understand how containerization makes an application easier to package and run in a consistent environment.
 
-## Lessons Learned
+## Security Improvements
 
-This assignment improved my understanding of several important software development concepts:
+Security scanning was incorporated into the CI/CD workflow using Trivy.
 
-1. **SQLAlchemy:** I gained practical experience with model relationships, inheritance, polymorphism, and database metadata.
-2. **Pydantic:** I improved my understanding of data validation and schema design.
-3. **Testing:** I learned the importance of unit, integration, and end-to-end testing, as well as measuring code coverage.
-4. **Docker:** I gained experience building and running containerized applications.
-5. **CI/CD:** I learned how GitHub Actions can automate testing, security scanning, and deployment.
-6. **Troubleshooting:** I became more confident diagnosing database configuration, port conflicts, and deployment issues.
+During the process, the scanner identified vulnerabilities associated with an earlier version of the `python-multipart` dependency. I updated the dependency to version `0.0.34` and reran the workflow.
+
+The security job subsequently completed successfully.
+
+This experience demonstrated the importance of scanning application images and dependencies rather than relying only on application tests.
+
+## CI/CD and Deployment
+
+GitHub Actions was configured to automate the project's testing, security scanning, and deployment processes.
+
+The workflow contains three main jobs:
+
+1. **Test:** Installs the required dependencies and runs the automated test suite with coverage enforcement.
+2. **Security:** Builds the Docker image and scans it with Trivy for high and critical vulnerabilities.
+3. **Deploy:** Publishes the Docker image to Docker Hub after the required preceding jobs succeed.
+
+The workflow completed successfully for all three jobs: test, security, and deploy.
+
+The deployment workflow publishes the image using both the `latest` tag and a commit-specific tag. Docker Hub credentials are supplied through GitHub repository secrets rather than being written directly into the workflow file.
+
+I independently pulled the published `slasha1982/module12_is601:latest` image from Docker Hub and ran it in a separate container. The container reported a healthy status, and its `/health`, `/docs`, and `/openapi.json` endpoints all returned HTTP 200. I also verified PostgreSQL connectivity with `SELECT 1`, which returned `1`, and Redis connectivity with `PING`, which returned `True`.
+
+## Challenges and Lessons Learned
+
+One of the main challenges was ensuring compatibility between the application, its dependencies, and the Docker environment.
+
+I also learned that a successful local test run does not replace the need for automated CI checks and security scanning. Each stage provides a different form of verification.
+
+Resolving the dependency vulnerabilities reinforced the importance of maintaining dependencies and reviewing security scan results.
+
+Configuring the deployment workflow also improved my understanding of GitHub Actions, repository secrets, Docker image tagging, and automated publishing.
 
 ## Areas for Further Improvement
 
-Although the application and deployment workflow are working, there are areas I would like to improve:
+Although the current test suite passes and the CI/CD workflow completes successfully, there are areas I would improve further:
 
-- Expand test coverage for additional calculation edge cases and error scenarios.
-- Improve application configuration and secrets management.
-- Add more comprehensive authentication and authorization integration tests.
-- Continue monitoring dependencies and container vulnerabilities.
-- Improve deployment monitoring and logging.
+- Increase code coverage beyond the current 68.21%.
+- Expand tests for authentication, token refresh, and token blacklist edge cases.
+- Continue monitoring and independently verifying published Docker Hub images after deployment.
+- Continue monitoring dependency vulnerabilities and updating packages when necessary.
+- Improve application logging and operational monitoring.
 
 ## Conclusion
 
-Module 11 provided practical experience in developing and deploying a Python application using modern software engineering tools.
+Module 12 provided practical experience in developing, testing, containerizing, securing, and deploying a backend application.
 
-I successfully implemented the application models and schemas, integrated PostgreSQL, achieved 96% test coverage, and configured an automated CI/CD workflow. I also verified that the published Docker Hub image could be pulled and run successfully.
+I gained a better understanding of how FastAPI, PostgreSQL, Redis, JWT authentication, Docker, and GitHub Actions work together in a modern application environment.
 
-The assignment strengthened my understanding of the complete development process, from application implementation and testing to containerization and automated deployment.
+The successful local tests, container health checks, and GitHub Actions test, security, and deployment jobs represent important milestones in the project.
+
+Overall, the module strengthened my understanding of backend development, automated testing, containerization, application security, and CI/CD practices. It also highlighted the importance of continuous improvement through stronger test coverage, security maintenance, and deployment verification.
