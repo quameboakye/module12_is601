@@ -131,3 +131,7 @@ class CalculationResponse(CalculationBase):
             }
         }
     )
+
+
+# Module 12 rubric-compatible name for the calculation response schema.
+CalculationRead = CalculationResponse
