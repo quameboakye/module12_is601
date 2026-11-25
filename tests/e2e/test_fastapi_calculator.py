@@ -180,3 +180,84 @@ def test_model_division():
     with pytest.raises(ValueError):
         calc_zero = Calculation.create('division', dummy_user_id, [100, 0])
         calc_zero.get_result()
+
+
+def test_users_register_endpoint(base_url: str):
+    user_data = {
+        'first_name': 'New',
+        'last_name': 'User',
+        'email': f'new.user.{uuid4()}@example.com',
+        'username': f'new_user_{uuid4().hex[:10]}',
+        'password': 'SecurePass123!',
+        'confirm_password': 'SecurePass123!'
+    }
+
+    response = requests.post(
+        f'{base_url}/users/register',
+        json=user_data
+    )
+
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data['username'] == user_data['username']
+    assert data['email'] == user_data['email']
+    assert 'id' in data
+
+
+def test_users_login_endpoint(base_url: str):
+    user_data = {
+        'first_name': 'Login',
+        'last_name': 'User',
+        'email': f'login.user.{uuid4()}@example.com',
+        'username': f'login_user_{uuid4().hex[:10]}',
+        'password': 'SecurePass123!',
+        'confirm_password': 'SecurePass123!'
+    }
+
+    register_response = requests.post(
+        f'{base_url}/users/register',
+        json=user_data
+    )
+    assert register_response.status_code == 201, register_response.text
+
+    login_response = requests.post(
+        f'{base_url}/users/login',
+        json={
+            'username': user_data['username'],
+            'password': user_data['password']
+        }
+    )
+
+    assert login_response.status_code == 200, login_response.text
+    login_data = login_response.json()
+    assert login_data['username'] == user_data['username']
+    assert login_data['token_type'].lower() == 'bearer'
+    assert login_data['access_token']
+    assert login_data['refresh_token']
+
+
+def test_users_login_rejects_invalid_password(base_url: str):
+    user_data = {
+        'first_name': 'Invalid',
+        'last_name': 'Password',
+        'email': f'invalid.password.{uuid4()}@example.com',
+        'username': f'invalid_password_{uuid4().hex[:10]}',
+        'password': 'SecurePass123!',
+        'confirm_password': 'SecurePass123!'
+    }
+
+    register_response = requests.post(
+        f'{base_url}/users/register',
+        json=user_data
+    )
+    assert register_response.status_code == 201, register_response.text
+
+    login_response = requests.post(
+        f'{base_url}/users/login',
+        json={
+            'username': user_data['username'],
+            'password': 'WrongPassword123!'
+        }
+    )
+
+    assert login_response.status_code == 401
